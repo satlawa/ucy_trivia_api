@@ -9,6 +9,9 @@ from models import setup_db, Question, Category
 
 QUESTIONS_PER_PAGE = 10
 
+def paginate(request, selection):
+    pass
+
 def create_app(test_config=None):
     # create and configure the app
     app = Flask(__name__)
@@ -55,6 +58,28 @@ def create_app(test_config=None):
     ten questions per page and pagination at the bottom of the screen for three pages.
     Clicking on the page numbers should update the questions.
     """
+    @app.route('/questions', methods=['GET'])
+    def get_questions():
+        try:
+            questions = Question.query.order_by(Question.id).all()
+            categories = Category.query.order_by(Category.id).all()
+
+            page = request.args.get('page', 1, type=int)
+            start = (page - 1) * QUESTIONS_PER_PAGE
+            end = start + QUESTIONS_PER_PAGE
+            formated_questions = [question.format() for question in questions]
+
+            return jsonify({
+                'success': True,
+                'questions': formated_questions[start:end],
+                'categories': [category.format() for category in categories],
+                'totalQuestions': len(questions),
+                'currentCategory': None
+            })
+
+        except:
+            abort(422)
+
 
     @app.route('/questions/<int:question_id>', methods=['DELETE'])
     def delete_question(question_id):
