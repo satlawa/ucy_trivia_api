@@ -9,8 +9,15 @@ from models import setup_db, Question, Category
 
 QUESTIONS_PER_PAGE = 10
 
-def paginate(request, selection):
-    pass
+def paginate(data, page):
+    """paginate data into max formated items per page"""
+    # get start and end index
+    start = (page - 1) * QUESTIONS_PER_PAGE
+    end = start + QUESTIONS_PER_PAGE
+    # format data
+    formated_data = [data_i.format() for data_i in data]
+    return formated_data[start:end]
+
 
 def create_app(test_config=None):
     # create and configure the app
@@ -63,15 +70,12 @@ def create_app(test_config=None):
         try:
             questions = Question.query.order_by(Question.id).all()
             categories = Category.query.order_by(Category.id).all()
-
             page = request.args.get('page', 1, type=int)
-            start = (page - 1) * QUESTIONS_PER_PAGE
-            end = start + QUESTIONS_PER_PAGE
-            formated_questions = [question.format() for question in questions]
+            formated_questions = paginate(questions, page)
 
             return jsonify({
                 'success': True,
-                'questions': formated_questions[start:end],
+                'questions': formated_questions,
                 'categories': [category.format() for category in categories],
                 'totalQuestions': len(questions),
                 'currentCategory': None
@@ -150,15 +154,12 @@ def create_app(test_config=None):
                 abort(404)
 
             questions = Question.query.filter(Question.question.ilike(f"%{search_term}%")).all()
-
             page = request.args.get('page', 1, type=int)
-            start = (page - 1) * QUESTIONS_PER_PAGE
-            end = start + QUESTIONS_PER_PAGE
-            formated_questions = [question.format() for question in questions]
+            formated_questions = paginate(questions, page)
 
             return jsonify({
                 'success': True,
-                'questions': formated_questions[start:end],
+                'questions': formated_questions,
                 'totalQuestions': len(questions),
                 'currentCategory': None
             })
