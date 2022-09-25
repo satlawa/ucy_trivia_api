@@ -63,9 +63,9 @@ class QuestionView extends Component {
     return pageNumbers;
   }
 
-  getByCategory = (id) => {
+  getByCategory = (id, pageNumber=1) => {
     $.ajax({
-      url: `/categories/${id}/questions`, //TODO: update request URL
+      url: `/categories/${id}/questions?page=${pageNumber}`, //TODO: update request URL
       type: 'GET',
       success: (result) => {
         this.setState({
@@ -82,9 +82,9 @@ class QuestionView extends Component {
     });
   };
 
-  submitSearch = (searchTerm) => {
+  submitSearch = (searchTerm, pageNumber=1) => {
     $.ajax({
-      url: `/questions`, //TODO: update request URL
+      url: `/questions/search?page=${pageNumber}`, //TODO: update request URL
       type: 'POST',
       dataType: 'json',
       contentType: 'application/json',
