@@ -1,6 +1,7 @@
 from crypt import methods
 import os
-from flask import Flask, request, abort, jsonify
+from unicodedata import category
+from flask import Flask, request, abort, jsonify, redirect
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 import random
@@ -17,6 +18,9 @@ def paginate(data, page):
     # format data
     formated_data = [data_i.format() for data_i in data]
     return formated_data[start:end]
+
+def format_categories(categories):
+    return {category.id: category.type for category in categories}
 
 
 def create_app(test_config=None):
@@ -50,7 +54,7 @@ def create_app(test_config=None):
     
         return jsonify({
             'success': True,
-            'categories': [category.format() for category in categories]
+            'categories': format_categories(categories)
         })
 
     """
@@ -76,7 +80,7 @@ def create_app(test_config=None):
             return jsonify({
                 'success': True,
                 'questions': formated_questions,
-                'categories': [category.format() for category in categories],
+                'categories': format_categories(categories),
                 'totalQuestions': len(questions),
                 'currentCategory': None
             })
@@ -151,17 +155,16 @@ def create_app(test_config=None):
             search_term = body.get('searchTerm', None)
 
             if not search_term:
-                abort(404)
-
-            questions = Question.query.filter(Question.question.ilike(f"%{search_term}%")).all()
+                questions = Question.query.order_by(Question.id).all()
+            else:
+                questions = Question.query.filter(Question.question.ilike(f"%{search_term}%")).all()
             page = request.args.get('page', 1, type=int)
             formated_questions = paginate(questions, page)
 
             return jsonify({
                 'success': True,
                 'questions': formated_questions,
-                'totalQuestions': len(questions),
-                'currentCategory': None
+                'totalQuestions': len(questions)
             })
 
         except:
@@ -175,6 +178,23 @@ def create_app(test_config=None):
     categories in the left column will cause only questions of that
     category to be shown.
     """
+    @app.route('/categories/<int:category_id>/questions', methods=['GET'])
+    def get_question_by_category(category_id):
+        try:
+            questions = Question.query.filter_by(category=str(category_id)).order_by(Question.id).all()
+            #categories = Category.query.order_by(Category.type).all()
+            page = request.args.get('page', 1, type=int)
+            formated_questions = paginate(questions, page)
+
+            return jsonify({
+                'success': True,
+                'questions': formated_questions,
+                'totalQuestions': len(questions),
+                'currentCategory': category_id
+            })
+
+        except:
+            abort(422)
 
     """
     @TODO:
@@ -187,6 +207,42 @@ def create_app(test_config=None):
     one question at a time is displayed, the user is allowed to answer
     and shown whether they were correct or not.
     """
+    @app.route('/quizzes', methods=['POST'])
+    def play_quiz():
+        try:
+            body = request.get_json()
+            if not body:
+                abort(400)
+            if not ("previous_questions" in body and "quiz_category" in body):
+                abort(404)
+            previous_questions = body.get("previous_questions")
+            quiz_category = body.get("quiz_category")
+            categories = Category.query.all()
+            print(categories)
+
+            if int(quiz_category['id']) > 0:
+                next_question = Question.query \
+                    .filter(Question.category == int(quiz_category['id'])) \
+                    .filter(Question.id.notin_(previous_questions)) \
+                    .all()
+            else:
+                next_question = Question.query \
+                    .filter(Question.id.notin_(previous_questions)) \
+                    .all()
+
+            if next_question:
+                # get random formated question
+                formated_question = random.choice(next_question).format()
+
+                return jsonify({
+                    'success': True,
+                    'question': formated_question
+                })
+            else:
+                abort(404)
+
+        except:
+            abort(422)
 
     """
     @TODO:
