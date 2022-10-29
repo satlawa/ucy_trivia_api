@@ -35,15 +35,110 @@ class TriviaTestCase(unittest.TestCase):
     """
 
     def test_get_categories_happy_path(self):
-        """test if we get the right respose fron the /category endpoint"""
+        """test if we get the right respose from endpoint /category"""
         
+        # get response
         response = self.client().get("/categories")
         data = json.loads(response.data)
 
+        # check status code
         self.assertEqual(response.status_code, 200)
         self.assertEqual(data['success'], True)
 
+        # check body
         self.assertEqual(len(data["categories"]), len(Category.query.all()))
+
+
+    def test_get_questions_happy_path(self):
+        """test if we get the right respose from endpoint /questions"""
+        
+        response = self.client().get("/questions")
+        data = json.loads(response.data)
+
+        # check status code
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(data['success'], True)
+
+        # check body
+        self.assertTrue(data['total_questions'])
+        self.assertTrue(len(data['questions'])<=data['total_questions'])
+        self.assertTrue(len(data['questions'])<=10)
+        self.assertEqual(len(data["questions"]), len(Category.query.all()))
+
+######
+
+    def test_create_question_happy_path(self):
+        """test if we get the right respose when creating an 
+        valid question at endpoint /questions"""
+
+        question = {
+            'question': 'How is performance of a CPU measured?',
+            'answer': 'instructions per second',
+            'difficulty': 3,
+            'category': 5
+        }
+        
+        response = self.client().post("/questions", json=question)
+        data = json.loads(response.data)
+
+        # check status code
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(data['success'], True)
+
+        # check body
+        self.assertTrue(data['created'])
+        self.question_id = data['created']
+
+
+    def test_create_question_missing_question(self):
+        """test if we get the right respose when creating an 
+        invalid question at endpoint /questions"""
+
+        question = {
+            'answer': 'instructions per second',
+            'difficulty': 3,
+            'category': 5
+        }
+        
+        response = self.client().post("/questions", json=question)
+        data = json.loads(response.data)
+
+        # check status code
+        self.assertEqual(response.status_code, 422)
+        self.assertEqual(data['success'], False)
+        self.assertEqual(data['message'], 'Unprocessable')
+
+######
+    
+    def test_delete_question_happy_path(self):
+        """test if we get the right respose when deleting an existing 
+        question at endpoint /questions/<int:question_id>"""
+
+        #question_id = 9
+
+        response = self.client().delete(f"/questions/{self.question_id}")
+        data = json.loads(response.data)
+
+        # check status code
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(data['success'], True)
+
+        self.assertEqual(data['deleted'], self.question_id)
+
+
+    def test_delete_question_missing_question(self):
+        """test if we get the right respose when deleting an non existing 
+        question at endpoint /questions/<int:question_id>"""
+        
+        response = self.client().delete("/questions/999")
+        data = json.loads(response.data)
+
+        # check status code
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(data['success'], False)
+        
+        # check body
+        self.assertEqual(data['message'], 'Not Found')
 
 
 
