@@ -113,7 +113,7 @@ def create_app(test_config=None):
         body = request.get_json()
 
         if not ('question' in body and 'answer' in body and 'category' in body and 'difficulty' in body):
-            abort(422)
+            abort(400)
 
         new_question = body.get('question', None)
         new_answer = body.get('answer', None)
@@ -155,7 +155,8 @@ def create_app(test_config=None):
             search_term = body.get('searchTerm', None)
 
             if not search_term:
-                questions = Question.query.order_by(Question.id).all()
+                abort(404)
+                #questions = Question.query.order_by(Question.id).all()
             else:
                 questions = Question.query.filter(Question.question.ilike(f"%{search_term}%")).all()
             page = request.args.get('page', 1, type=int)
@@ -181,8 +182,12 @@ def create_app(test_config=None):
     @app.route('/categories/<int:category_id>/questions', methods=['GET'])
     def get_question_by_category(category_id):
         try:
+            ##
+            categories = Category.query.order_by(Category.type).all()
+            if category_id not in categories:
+                abort(404)
+            ##
             questions = Question.query.filter_by(category=str(category_id)).order_by(Question.id).all()
-            #categories = Category.query.order_by(Category.type).all()
             page = request.args.get('page', 1, type=int)
             formated_questions = paginate(questions, page)
 
@@ -214,11 +219,11 @@ def create_app(test_config=None):
             if not body:
                 abort(400)
             if not ("previous_questions" in body and "quiz_category" in body):
-                abort(404)
+                abort(400)
             previous_questions = body.get("previous_questions")
             quiz_category = body.get("quiz_category")
             categories = Category.query.all()
-            print(categories)
+            #print(categories)
 
             if int(quiz_category['id']) > 0:
                 next_question = Question.query \
@@ -239,7 +244,7 @@ def create_app(test_config=None):
                     'question': formated_question
                 })
             else:
-                abort(404)
+                None #abort(404)
 
         except:
             abort(422)
